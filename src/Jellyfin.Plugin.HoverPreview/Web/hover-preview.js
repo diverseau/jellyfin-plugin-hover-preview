@@ -26,6 +26,7 @@
     var DIRECT_TIMEOUT = 8000;    // no first frame within this -> try the transcode
     var TRANSCODE_TIMEOUT = 20000;
     var MUTE_KEY = 'hoverPreview.muted';
+    var PREVIEW_VOLUME = 0.75;    // previews play a bit quieter than full volume when unmuted
 
     var hoverMedia = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
 
@@ -313,6 +314,7 @@
         var still = el('img', 'hp-still', { alt: '', decoding: 'async' });
         var video = el('video', 'hp-video', { playsinline: '', preload: 'auto', disablepictureinpicture: '', disableremoteplayback: '' });
         video.muted = true;
+        video.volume = PREVIEW_VOLUME;
         var shade = el('div', 'hp-shade');
         var logo = el('img', 'hp-logo', { alt: '' });
         var title = el('div', 'hp-title');
@@ -513,9 +515,12 @@
         root.style.left = left + 'px';
         root.style.top = '0px';
 
-        // Centre the 16:9 area on the card image, then keep the whole card on screen.
+        // Landscape cards: centre the 16:9 area on the card image (Netflix). Portrait posters are
+        // taller than the picture, so centre the whole popup, info panel included, on the poster.
+        // Either way, keep the whole card on screen.
         var height = root.offsetHeight || mediaH + 150;
-        var top = cy - mediaH / 2;
+        var portrait = rect.height > rect.width;
+        var top = portrait ? cy - height / 2 : cy - mediaH / 2;
         top = Math.min(top, viewportH - height - margin);
         top = Math.max(top, margin);
         root.style.top = top + 'px';
@@ -863,7 +868,7 @@
         var video = ui.video;
         video.muted = !video.muted;
         if (!video.muted) {
-            video.volume = 1;
+            video.volume = PREVIEW_VOLUME;
         }
         writeMuted(video.muted);
         renderMute();

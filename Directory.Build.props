@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- Single source of truth for the plugin version (SemVer major.minor.patch; Jellyfin wants a 4th part = 0). -->
-    <HoverPreviewVersion>1.1.0</HoverPreviewVersion>
+    <HoverPreviewVersion>1.1.1</HoverPreviewVersion>
     <Version>$(HoverPreviewVersion)</Version>
     <AssemblyVersion>$(HoverPreviewVersion).0</AssemblyVersion>
     <FileVersion>$(HoverPreviewVersion).0</FileVersion>
