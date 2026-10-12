@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <!-- Single source of truth for the plugin version (SemVer major.minor.patch; Jellyfin wants a 4th part = 0). -->
+    <HoverPreviewVersion>1.0.0</HoverPreviewVersion>
+    <Version>$(HoverPreviewVersion)</Version>
+    <AssemblyVersion>$(HoverPreviewVersion).0</AssemblyVersion>
+    <FileVersion>$(HoverPreviewVersion).0</FileVersion>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+</Project>

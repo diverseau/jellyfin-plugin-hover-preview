@@ -1,0 +1,17 @@
+---
+name: "Hover Preview"
+guid: "4f7ecbe9-9f13-44e5-814d-63e5ad579f8c"
+version: "1.0.0.0"
+targetAbi: "10.11.0.0"
+framework: "net9.0"
+owner: "diverseau"
+category: "General"
+overview: "Netflix-style pop-out cards with muted preview clips on hover"
+description: >
+  Rest the mouse on any card in jellyfin-web and a larger card pops out with the
+  backdrop, title logo, Play / favourite / like / details buttons and the item's
+  metadata, then plays a short muted, spoiler-safe preview clip.
+artifacts:
+  - "Jellyfin.Plugin.HoverPreview.dll"
+changelog: >
+  Initial release.

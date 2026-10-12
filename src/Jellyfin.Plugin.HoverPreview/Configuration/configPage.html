@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Hover Preview</title>
+</head>
+<body>
+    <div id="HoverPreviewConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="HoverPreviewConfigForm">
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">Hover Preview</h2>
+                        <p>Resting the mouse on a card pops out a larger card with a muted preview clip. Changes apply after reloading the web page.</p>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">General</h3>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="Enabled" type="checkbox" is="emby-checkbox" />
+                                <span>Enable hover cards</span>
+                            </label>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="EnableVideo" type="checkbox" is="emby-checkbox" />
+                                <span>Play preview clips</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">When off, cards show the still image and details only.</div>
+                        </div>
+                        <div class="checkboxContainer">
+                            <label class="emby-checkbox-label">
+                                <input id="StartMuted" type="checkbox" is="emby-checkbox" />
+                                <span>Start clips muted</span>
+                            </label>
+                        </div>
+                        <div class="inputContainer">
+                            <input id="HoverDelayMs" type="number" is="emby-input" min="100" max="3000" step="50" label="Hover delay (ms)" />
+                            <div class="fieldDescription">How long the pointer rests on a card before it pops out. Netflix uses about 500.</div>
+                        </div>
+                        <div class="inputContainer">
+                            <input id="ClipDurationSeconds" type="number" is="emby-input" min="20" max="180" label="Clip length (seconds)" />
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Where</h3>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableOnHome" type="checkbox" is="emby-checkbox" /><span>Home</span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableOnLibraries" type="checkbox" is="emby-checkbox" /><span>Libraries and other pages</span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableOnSearch" type="checkbox" is="emby-checkbox" /><span>Search</span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableOnDetails" type="checkbox" is="emby-checkbox" /><span>Item details ("More Like This")</span></label></div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Clip selection (spoiler guard)</h3>
+                        <p class="fieldDescription">Shows always preview their first two episodes. Clips never use intros, recaps, credits or the last 15% of a video.</p>
+                        <div class="inputContainer">
+                            <input id="MovieRangeStartPercent" type="number" is="emby-input" min="0" max="95" label="Movies: earliest start (% of runtime)" />
+                        </div>
+                        <div class="inputContainer">
+                            <input id="MovieRangeEndPercent" type="number" is="emby-input" min="5" max="100" label="Movies: latest end (% of runtime)" />
+                        </div>
+                        <div class="inputContainer">
+                            <input id="EpisodeRangeStartPercent" type="number" is="emby-input" min="0" max="95" label="Episodes: earliest start (% of runtime)" />
+                        </div>
+                        <div class="inputContainer">
+                            <input id="EpisodeRangeEndPercent" type="number" is="emby-input" min="5" max="100" label="Episodes: latest end (% of runtime)" />
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Streaming</h3>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="AllowDirectPlay" type="checkbox" is="emby-checkbox" />
+                                <span>Allow direct play</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">Browser-compatible files (MP4/H.264/AAC) stream untouched; everything else is transcoded to a small preview.</div>
+                        </div>
+                        <div class="inputContainer">
+                            <input id="MaxDirectPlayBitrateMbps" type="number" is="emby-input" min="1" max="200" label="Direct play bitrate limit (Mbps)" />
+                        </div>
+                        <div class="inputContainer">
+                            <input id="TranscodeMaxWidth" type="number" is="emby-input" min="320" max="1920" step="2" label="Transcode width (px)" />
+                        </div>
+                        <div class="inputContainer">
+                            <input id="TranscodeBitrateKbps" type="number" is="emby-input" min="300" max="20000" label="Transcode bitrate (kbps)" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = '4f7ecbe9-9f13-44e5-814d-63e5ad579f8c';
+                var page = document.querySelector('#HoverPreviewConfigPage');
+                var checkboxes = ['Enabled', 'EnableVideo', 'StartMuted', 'EnableOnHome', 'EnableOnLibraries', 'EnableOnSearch', 'EnableOnDetails', 'AllowDirectPlay'];
+                var numbers = ['HoverDelayMs', 'ClipDurationSeconds', 'MovieRangeStartPercent', 'MovieRangeEndPercent', 'EpisodeRangeStartPercent', 'EpisodeRangeEndPercent', 'MaxDirectPlayBitrateMbps', 'TranscodeMaxWidth', 'TranscodeBitrateKbps'];
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        checkboxes.forEach(function (key) {
+                            page.querySelector('#' + key).checked = !!config[key];
+                        });
+                        numbers.forEach(function (key) {
+                            page.querySelector('#' + key).value = config[key];
+                        });
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+                page.querySelector('#HoverPreviewConfigForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        checkboxes.forEach(function (key) {
+                            config[key] = page.querySelector('#' + key).checked;
+                        });
+                        numbers.forEach(function (key) {
+                            var value = parseInt(page.querySelector('#' + key).value, 10);
+                            if (!isNaN(value)) {
+                                config[key] = value;
+                            }
+                        });
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    return false;
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

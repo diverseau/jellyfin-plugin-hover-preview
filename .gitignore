@@ -1,0 +1,10 @@
+bin/
+obj/
+artifacts/
+.vs/
+.vscode/
+.idea/
+*.user
+TestResults/
+# local test server state
+.local-jellyfin/
