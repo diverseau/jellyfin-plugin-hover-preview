@@ -116,7 +116,10 @@ public sealed class FileTransformationRegistrar : IHostedService
         var json = System.Text.Json.JsonSerializer.Serialize(new
         {
             id = TransformationId,
-            fileNamePattern = "index\\.html$",
+            // Must be exactly "index.html": File Transformation keys pipelines by this string and, for
+            // index.html, only runs the pipeline whose key matches the file name exactly. A regex like
+            // "index\\.html$" is silently skipped as soon as any other plugin registers "index.html".
+            fileNamePattern = "index.html",
             callbackAssembly = typeof(TransformationCallbacks).Assembly.FullName,
             callbackClass = typeof(TransformationCallbacks).FullName,
             callbackMethod = nameof(TransformationCallbacks.IndexHtml),

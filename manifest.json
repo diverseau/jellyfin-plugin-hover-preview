@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "1.0.1.0",
+        "changelog": "https://github.com/diverseau/jellyfin-plugin-hover-preview/releases/tag/v1.0.1",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/diverseau/jellyfin-plugin-hover-preview/releases/download/v1.0.1/hover-preview_1.0.1.zip",
+        "checksum": "c913ac13911c112a7653456a4f1761f1",
+        "timestamp": "2026-10-12T20:45:18Z"
+      },
+      {
         "version": "1.0.0.0",
         "changelog": "https://github.com/diverseau/jellyfin-plugin-hover-preview/releases/tag/v1.0.0",
         "targetAbi": "10.11.0.0",

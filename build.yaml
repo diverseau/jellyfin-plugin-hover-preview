@@ -1,7 +1,7 @@
 ---
 name: "Hover Preview"
 guid: "4f7ecbe9-9f13-44e5-814d-63e5ad579f8c"
-version: "1.0.0.0"
+version: "1.0.1.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 owner: "diverseau"
@@ -14,4 +14,4 @@ description: >
 artifacts:
   - "Jellyfin.Plugin.HoverPreview.dll"
 changelog: >
-  Initial release.
+  Fix: script not injected when other plugins also transform index.html.
