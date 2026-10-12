@@ -114,8 +114,9 @@
 .hp-panel {
     display: flex;
     flex-direction: column;
-    gap: 0.7em;
-    padding: 0.9em 1.1em 1.15em;
+    gap: 0.5em;
+    padding: 0.7em 0.95em 0.8em;
+    cursor: pointer;
     background: var(--lighterGradientPoint, #181818);
 }
 
@@ -131,8 +132,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.45em;
-    height: 2.45em;
+    width: 2.25em;
+    height: 2.25em;
     margin: 0;
     padding: 0;
     border-radius: 50%;
@@ -210,9 +211,12 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5em;
-    min-height: 1.4em;
-    font-size: 0.9em;
+    font-size: 0.85em;
     color: var(--dimTextColor, #bcbcbc);
+}
+
+.hp-meta:empty {
+    display: none;
 }
 
 .hp-meta-progress {
@@ -272,8 +276,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.4em;
-    min-height: 1.3em;
-    font-size: 0.9em;
+    font-size: 0.85em;
     color: var(--textColor, #fff);
 }
 

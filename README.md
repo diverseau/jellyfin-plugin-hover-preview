@@ -12,6 +12,8 @@ item's details, then plays a short, muted preview clip.
   on each page load. Every card of the show (series, season, any episode, Continue Watching) uses the
   same pool, so a preview can never spoil anything past the start of the show.
 - Already watching? The card shows `S1:E6 "Title"`, a progress bar and `32 of 46m`, like Netflix.
+- Click the picture to play (from the start, or where you left off, exactly like the Play button;
+  never from the preview's position). Click anywhere else on the card, or the ⌄ button, for details.
 - Uses your theme's colours, corners and icons (tested with NeutralFin / ElegantFin and the default
   theme).
 

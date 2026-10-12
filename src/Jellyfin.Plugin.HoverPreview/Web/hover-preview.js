@@ -20,8 +20,6 @@
     var IMAGE_SELECTOR = '.cardImageContainer, .cardImage, .cardScalable';
     var SUPPORTED_TYPES = { Movie: 1, Series: 1, Season: 1, Episode: 1, Video: 1, MusicVideo: 1, BoxSet: 1, Trailer: 1 };
     var OPEN_DELAY = Math.max(100, Number(settings.delayMs) || 500);
-    var REOPEN_DELAY = 150;       // moving to a neighbour while a card is open feels instant, like Netflix
-    var REOPEN_WINDOW = 400;      // how long after a close the faster re-open still applies
     var LEAVE_GRACE = 120;        // pointer may briefly cross a gap without closing
     var PREFETCH_DELAY = 150;     // dwell before data is fetched (skips cards swept across)
     var STILL_MS = 500;           // still shows this long before the clip starts
@@ -43,7 +41,6 @@
         closeTimer: 0,
         stillTimer: 0,
         stallTimer: 0,
-        lastClosed: 0,
         open: false,
         token: 0,            // bumps on every open/close; async work checks it to avoid stale updates
         stream: null         // { url, transcode, playSessionId, startSeconds, durationSeconds, triedTranscode }
@@ -346,11 +343,16 @@
                 scheduleClose();
             }
         });
+        // Picture: play (like Netflix). Rest of the card: details. Buttons handle themselves.
         media.addEventListener('click', function (e) {
-            if (e.target.closest('.hp-btn')) {
-                return;
+            if (!e.target.closest('.hp-btn')) {
+                playItem();
             }
-            openDetails();
+        });
+        panel.addEventListener('click', function (e) {
+            if (!e.target.closest('.hp-btn')) {
+                openDetails();
+            }
         });
         mute.addEventListener('click', toggleMute);
         play.addEventListener('click', playItem);
@@ -555,7 +557,6 @@
             return;
         }
         state.card = card;
-        var quick = state.open || Date.now() - state.lastClosed < REOPEN_WINDOW;
 
         // Warm the caches during the dwell so the card opens fully populated, including the still.
         // Not for cards the pointer merely sweeps across.
@@ -578,7 +579,7 @@
             if (state.card === card && card.isConnected && environmentAllows()) {
                 open(card, info);
             }
-        }, quick ? REOPEN_DELAY : OPEN_DELAY);
+        }, OPEN_DELAY);
     }
 
     function open(card, info) {
@@ -658,23 +659,28 @@
         });
     }
 
-    function close() {
-        cancelPending();
-        cancelClose();
+    /** Hides the popup but leaves any pending open (for the next card) alone. */
+    function hidePopup() {
+        state.closeTimer = 0;
         if (!state.open) {
-            state.card = null;
             return;
         }
         state.token++;
         state.open = false;
-        state.card = null;
         state.item = null;
-        state.lastClosed = Date.now();
+        state.openCard = null;
         stopVideo();
         if (ui) {
             ui.root.classList.remove('hp-open', 'hp-playing');
             ui.root.setAttribute('aria-hidden', 'true');
         }
+    }
+
+    function close() {
+        cancelPending();
+        cancelClose();
+        state.card = null;
+        hidePopup();
     }
 
     // ---------------------------------------------------------------- video
@@ -863,24 +869,42 @@
         renderMute();
     }
 
+    /**
+     * Navigates the way jellyfin-web itself does (the card's own link, then its router). Writing the
+     * URL hash directly bypasses the router and left some pages half rendered.
+     */
     function openDetails() {
         var info = state.info;
+        var card = state.openCard;
         if (!info) {
             return;
         }
         close();
+        var link = card && card.isConnected && card.querySelector('[data-action="link"]');
+        if (link) {
+            link.click();
+            return;
+        }
+        var router = window.Emby && window.Emby.Page;
+        if (router && typeof router.showItem === 'function') {
+            router.showItem(info.id, info.serverId);
+            return;
+        }
         window.location.hash = '#/details?id=' + encodeURIComponent(info.id) + '&serverId=' + encodeURIComponent(info.serverId || '');
     }
 
+    /**
+     * Starts playback exactly as the card's own Play button would: from the beginning if unwatched,
+     * from the resume point if started, next-up for shows. Never from the preview position.
+     */
     function playItem() {
         // The open card, not a neighbour the pointer may be pending on.
         var card = state.openCard;
-        var native = card && card.querySelector('[data-action="resume"], [data-action="play"]');
-        close();
+        var native = card && card.isConnected && card.querySelector('[data-action="resume"], [data-action="play"]');
         if (native) {
-            // Let jellyfin-web start playback exactly as its own card button would (resume, next-up, queue).
+            close();
             native.click();
-        } else if (state.info) {
+        } else {
             openDetails();
         }
     }
@@ -893,9 +917,13 @@
         }
         var client = api();
         var token = state.token;
-        Promise.resolve(apply(client, client.getCurrentUserId(), item)).then(function (userData) {
-            if (userData) {
-                item.UserData = Object.assign({}, item.UserData, userData);
+        new Promise(function (resolve) {
+            resolve(apply(client, client.getCurrentUserId(), item));
+        }).then(function (userData) {
+            // The reply is the complete user data. Jellyfin omits null fields (Likes after an
+            // unlike), so merging it into the old state would keep the stale value.
+            if (userData && typeof userData === 'object') {
+                item.UserData = userData;
             }
             delete itemCache[cacheKey(info.id)];
             if (token === state.token) {
@@ -916,7 +944,12 @@
         e.stopPropagation();
         updateUserData(function (client, userId, item) {
             var liked = !!(item.UserData && item.UserData.Likes);
-            return liked ? client.deleteUserItemRating(userId, item.Id) : client.updateUserItemRating(userId, item.Id, true);
+            if (!liked) {
+                return client.updateUserItemRating(userId, item.Id, true);
+            }
+            // jellyfin-web 10.11 calls it clearUserItemRating; older apiclients deleteUserItemRating.
+            var clear = client.clearUserItemRating || client.deleteUserItemRating;
+            return clear.call(client, userId, item.Id);
         });
     }
 
@@ -937,16 +970,28 @@
         }
         if (ui && ui.root.contains(target)) {
             cancelClose();
+            // Back on the open card's popup: forget any neighbour that was pending.
+            if (state.open && state.card !== state.openCard) {
+                cancelPending();
+                state.card = state.openCard;
+            }
             return;
         }
         var card = target.closest(CARD_SELECTOR);
         if (card && card === state.card) {
-            cancelClose();
+            // Only the popup's own card keeps it open; a neighbour waiting to open must not.
+            if (card === state.openCard) {
+                cancelClose();
+            }
             return;
         }
         if (card && moved) {
+            // A different card: the open popup goes away and the new one waits the full delay.
             cancelClose();
             scheduleOpen(card);
+            if (state.open) {
+                state.closeTimer = setTimeout(hidePopup, LEAVE_GRACE);
+            }
             return;
         }
         scheduleClose();
