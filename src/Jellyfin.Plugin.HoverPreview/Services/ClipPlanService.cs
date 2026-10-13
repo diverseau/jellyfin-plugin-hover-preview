@@ -66,9 +66,10 @@ public sealed class ClipPlanService
     /// <param name="user">The requesting user, or null for an admin API key.</param>
     /// <param name="isLocalClient">Whether the request comes from the local network (remote bitrate limits apply otherwise).</param>
     /// <param name="config">Current plugin settings.</param>
+    /// <param name="size">Where the clip is shown; only the transcode size differs, the clip itself is the same.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The plan, or null when the item doesn't exist or the user can't see it (indistinguishable on purpose).</returns>
-    public async Task<ClipPlanDto?> GetPlanAsync(Guid itemId, User? user, bool isLocalClient, PluginConfiguration config, CancellationToken cancellationToken)
+    public async Task<ClipPlanDto?> GetPlanAsync(Guid itemId, User? user, bool isLocalClient, PluginConfiguration config, PreviewSize size, CancellationToken cancellationToken)
     {
         var item = FindVisible(itemId, user);
         if (item is null)
@@ -100,6 +101,7 @@ public sealed class ClipPlanService
             user?.Id.ToString("N") ?? "-",
             policy,
             ClipPicker.HeuristicVersion,
+            size,
             config.PlanFingerprint());
 
         if (_cache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow - cached.Created < CacheLifetime)
@@ -111,7 +113,7 @@ public sealed class ClipPlanService
         ClipPlanDto plan;
         try
         {
-            var streamOptions = policy.Apply(config.ToStreamOptions());
+            var streamOptions = policy.Apply(config.ToStreamOptions(size));
             plan = !policy.AllowPlayback
                 ? none
                 : series is not null

@@ -39,6 +39,11 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public int TranscodeBitrateKbps { get; set; } = 1500;
 
+    /// <summary>Gets or sets the transcode width for the big banner clip (Media Bar Card), which is far larger than a card.</summary>
+    public int BannerMaxWidth { get; set; } = 1920;
+
+    public int BannerBitrateKbps { get; set; } = 6000;
+
     public int MovieRangeStartPercent { get; set; } = 15;
 
     public int MovieRangeEndPercent { get; set; } = 55;
@@ -65,12 +70,12 @@ public class PluginConfiguration : BasePluginConfiguration
         };
     }
 
-    internal StreamOptions ToStreamOptions() => new()
+    internal StreamOptions ToStreamOptions(PreviewSize size = PreviewSize.Card) => new()
     {
         AllowDirectPlay = AllowDirectPlay,
         MaxDirectBitrate = Math.Clamp(MaxDirectPlayBitrateMbps, 1, 200) * 1_000_000,
-        MaxWidth = Math.Clamp(TranscodeMaxWidth, 320, 1920) / 2 * 2,
-        VideoBitrate = Math.Clamp(TranscodeBitrateKbps, 300, 20000) * 1000,
+        MaxWidth = (size == PreviewSize.Banner ? Math.Clamp(BannerMaxWidth, 640, 3840) : Math.Clamp(TranscodeMaxWidth, 320, 1920)) / 2 * 2,
+        VideoBitrate = (size == PreviewSize.Banner ? Math.Clamp(BannerBitrateKbps, 1000, 40000) : Math.Clamp(TranscodeBitrateKbps, 300, 20000)) * 1000,
     };
 
     /// <summary>A cache key fragment that changes whenever a setting affecting clip plans changes.</summary>
@@ -84,7 +89,9 @@ public class PluginConfiguration : BasePluginConfiguration
         AllowDirectPlay,
         MaxDirectPlayBitrateMbps,
         TranscodeMaxWidth,
-        TranscodeBitrateKbps);
+        TranscodeBitrateKbps,
+        BannerMaxWidth,
+        BannerBitrateKbps);
 
     private static (double Start, double End) Range(int start, int end, int defaultStart, int defaultEnd)
     {

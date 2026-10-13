@@ -270,4 +270,59 @@ public class ConfigurationTests
         var b = new PluginConfiguration { MovieRangeEndPercent = 40 };
         Assert.NotEqual(a.PlanFingerprint(), b.PlanFingerprint());
     }
+
+    [Fact]
+    public void Banner_size_uses_the_banner_transcode_settings()
+    {
+        var config = new PluginConfiguration();
+        var card = config.ToStreamOptions(PreviewSize.Card);
+        var banner = config.ToStreamOptions(PreviewSize.Banner);
+
+        Assert.Equal(854, card.MaxWidth);
+        Assert.Equal(1_500_000, card.VideoBitrate);
+        Assert.Equal(1920, banner.MaxWidth);
+        Assert.Equal(6_000_000, banner.VideoBitrate);
+        Assert.Equal(card.MaxDirectBitrate, banner.MaxDirectBitrate);
+
+        var clamped = new PluginConfiguration { BannerMaxWidth = 99999, BannerBitrateKbps = 1 }.ToStreamOptions(PreviewSize.Banner);
+        Assert.Equal(3840, clamped.MaxWidth);
+        Assert.Equal(1_000_000, clamped.VideoBitrate);
+    }
+
+    [Fact]
+    public void Banner_transcode_of_a_1080p_h264_source_copies_the_video()
+    {
+        var source = new SourceTraits
+        {
+            MediaSourceId = "abc",
+            Container = "mkv",
+            VideoCodec = "h264",
+            VideoBitDepth = 8,
+            Width = 1920,
+            Height = 1080,
+            AudioCodec = "ac3",
+            Bitrate = 8_000_000,
+        };
+        var config = new PluginConfiguration();
+
+        var card = PlaybackPlanner.Plan(Guid.NewGuid(), 600_000_000, source, config.ToStreamOptions(PreviewSize.Card));
+        var banner = PlaybackPlanner.Plan(Guid.NewGuid(), 600_000_000, source, config.ToStreamOptions(PreviewSize.Banner));
+
+        // Same clip start; the card shrinks the video, the banner can remux it untouched
+        Assert.Contains("startTimeTicks=600000000", card.TranscodePath);
+        Assert.Contains("startTimeTicks=600000000", banner.TranscodePath);
+        Assert.Contains("maxWidth=854", card.TranscodePath);
+        Assert.Contains("allowVideoStreamCopy=false", card.TranscodePath);
+        Assert.Contains("maxWidth=1920", banner.TranscodePath);
+        Assert.Contains("videoBitRate=6000000", banner.TranscodePath);
+        Assert.Contains("allowVideoStreamCopy=true", banner.TranscodePath);
+    }
+
+    [Fact]
+    public void Fingerprint_changes_with_banner_settings()
+    {
+        var a = new PluginConfiguration();
+        var b = new PluginConfiguration { BannerBitrateKbps = 4000 };
+        Assert.NotEqual(a.PlanFingerprint(), b.PlanFingerprint());
+    }
 }

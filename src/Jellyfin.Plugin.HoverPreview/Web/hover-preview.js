@@ -192,18 +192,20 @@
         return promise;
     }
 
-    function getPlan(id) {
+    /** size "banner" asks for the larger transcode of the same clip (Media Bar Card's home banner). */
+    function getPlan(id, size) {
         if (!settings.video) {
             return Promise.resolve(null);
         }
-        var key = cacheKey(id);
+        var banner = size === 'banner';
+        var key = cacheKey(id) + (banner ? ':banner' : '');
         if (planCache[key]) {
             return planCache[key];
         }
         var client = api();
         var promise = Promise.resolve(client.ajax({
             type: 'GET',
-            url: client.getUrl('HoverPreview/Clips/' + encodeURIComponent(id)),
+            url: client.getUrl('HoverPreview/Clips/' + encodeURIComponent(id), banner ? { size: 'banner' } : undefined),
             dataType: 'json'
         })).catch(function () {
             delete planCache[key];
@@ -692,9 +694,13 @@
 
     // ---------------------------------------------------------------- video
 
+    function previewDeviceId(client) {
+        return 'hoverpreview-' + (typeof client.deviceId === 'function' ? client.deviceId() : 'web');
+    }
+
     function streamUrl(path, playSessionId) {
         var client = api();
-        var deviceId = 'hoverpreview-' + (typeof client.deviceId === 'function' ? client.deviceId() : 'web');
+        var deviceId = previewDeviceId(client);
         var url = client.getUrl(path.replace(/^\//, ''));
         return url + (url.indexOf('?') < 0 ? '?' : '&')
             + 'ApiKey=' + encodeURIComponent(client.accessToken())
@@ -782,6 +788,7 @@
         }
         clearTimeout(state.stallTimer);
         ui.root.classList.add('hp-playing');
+        announce('playing');
     }
 
     function onTimeUpdate() {
@@ -856,8 +863,7 @@
         if (!client || !stream.transcode) {
             return;
         }
-        var deviceId = 'hoverpreview-' + (typeof client.deviceId === 'function' ? client.deviceId() : 'web');
-        var url = client.getUrl('Videos/ActiveEncodings', { deviceId: deviceId, playSessionId: stream.playSessionId });
+        var url = client.getUrl('Videos/ActiveEncodings', { deviceId: previewDeviceId(client), playSessionId: stream.playSessionId });
         if (keepalive && window.fetch) {
             // The page is going away: a keepalive request survives the unload, an XHR would not.
             window.fetch(url, {
@@ -881,7 +887,54 @@
         releaseStream();
         // Make sure ffmpeg stops now rather than when the server notices the dropped connection.
         stopEncoding(stream, false);
+        announce('stopped');
     }
+
+    /** Lets other page code (Media Bar Card's banner) pause while a hover clip plays. */
+    function announce(what) {
+        try {
+            window.dispatchEvent(new CustomEvent('hoverpreview:' + what));
+        } catch (e) {
+            // very old browsers: nobody to tell
+        }
+    }
+
+    // ---------------------------------------------------------------- shared API
+
+    /**
+     * Used by Media Bar Card to play the same clips in its home banner. Versioned so a banner built
+     * for a newer API can tell it is talking to an older Hover Preview.
+     */
+    window.HoverPreview = {
+        apiVersion: 1,
+        volume: PREVIEW_VOLUME,
+        endTrimSeconds: END_TRIM,
+        fadeOutMs: FADE_OUT_MS,
+        videoEnabled: function () {
+            return !!settings.video;
+        },
+        /** Resolves to the item's plan ({ kind, poolId, clips }) or null. size: 'card' | 'banner'. */
+        getPlan: function (id, size) {
+            return api() ? getPlan(id, size) : Promise.resolve(null);
+        },
+        /** The clip to play; for shows the same pick the hover card uses on this page load. */
+        pickClip: pickClip,
+        isPlaying: function () {
+            return !!(state.stream && ui && ui.root.classList.contains('hp-playing'));
+        },
+        newPlaySessionId: function () {
+            return randomHex(16);
+        },
+        /** Full URL for a clip's directUrl / transcodeUrl, with the user's token and a session id. */
+        streamUrl: function (path, playSessionId) {
+            return streamUrl(path, playSessionId);
+        },
+        /** Stops the server-side transcode of a stream started with streamUrl. */
+        stopEncoding: function (playSessionId, keepalive) {
+            stopEncoding({ transcode: true, playSessionId: playSessionId }, keepalive);
+        }
+    };
+    announce('ready');
 
     // ---------------------------------------------------------------- buttons
 

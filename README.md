@@ -52,6 +52,7 @@ Dashboard → Plugins → Hover Preview:
 | Allow direct play | on | MP4/H.264/AAC files stream untouched |
 | Direct play bitrate limit | 20 Mbps | Bigger files are transcoded |
 | Transcode width / bitrate | 854 px / 1500 kbps | Size of transcoded previews |
+| Banner width / bitrate | 1920 px / 6000 kbps | Size of the same clips when Media Bar Card plays them in its home banner |
 
 ## How it works
 
@@ -67,6 +68,9 @@ The plugin has a small server part and a browser script:
   jellyfin-web uses, and streams the clip from Jellyfin's normal stream endpoint: untouched for files
   the browser can play, otherwise as a small 854 px transcode that is stopped as soon as the card
   closes. Only one preview plays at a time. Previews don't count as plays or change watch progress.
+- `?size=banner` returns the same clips as a larger transcode, and the page gets a small
+  `window.HoverPreview` API plus `hoverpreview:playing` / `hoverpreview:stopped` events. Media Bar
+  Card uses these to play the clip in its home banner and to pause it while a hover card plays.
 
 Clip choice lives behind `IClipHeuristic`, so smarter selection (e.g. scoring trickplay frames for
 motion) can be added without touching the rest.

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.HoverPreview.Clips;
 using Jellyfin.Plugin.HoverPreview.Services;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Net;
@@ -87,6 +88,7 @@ public class HoverPreviewController : ControllerBase
     /// playback/transcoding permissions and remote bitrate limit; hidden and missing items both 404.
     /// </summary>
     /// <param name="itemId">Item id from the card.</param>
+    /// <param name="size">"banner" for the larger home banner transcode; anything else is the card size.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The plan.</returns>
     [HttpGet("Clips/{itemId}")]
@@ -94,7 +96,7 @@ public class HoverPreviewController : ControllerBase
     [Produces(MediaTypeNames.Application.Json)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ClipPlanDto>> GetClips([FromRoute] Guid itemId, CancellationToken cancellationToken)
+    public async Task<ActionResult<ClipPlanDto>> GetClips([FromRoute] Guid itemId, [FromQuery] string? size, CancellationToken cancellationToken)
     {
         var plugin = Plugin.Instance;
         if (plugin is null || itemId == Guid.Empty)
@@ -116,7 +118,8 @@ public class HoverPreviewController : ControllerBase
 
         var remoteIp = HttpContext.Connection.RemoteIpAddress;
         var isLocal = remoteIp is not null && _networkManager.IsInLocalNetwork(remoteIp);
-        var plan = await _clipPlanService.GetPlanAsync(itemId, auth.User, isLocal, plugin.Configuration, cancellationToken).ConfigureAwait(false);
+        var previewSize = string.Equals(size, "banner", StringComparison.OrdinalIgnoreCase) ? PreviewSize.Banner : PreviewSize.Card;
+        var plan = await _clipPlanService.GetPlanAsync(itemId, auth.User, isLocal, plugin.Configuration, previewSize, cancellationToken).ConfigureAwait(false);
         if (plan is null)
         {
             return NotFound();

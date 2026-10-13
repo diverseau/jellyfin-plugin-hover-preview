@@ -36,6 +36,16 @@ public sealed record SourceTraits
     public bool IsPlainFile { get; init; } = true;
 }
 
+/// <summary>Where a preview is shown, which decides how big its transcode is.</summary>
+public enum PreviewSize
+{
+    /// <summary>The pop-out hover card.</summary>
+    Card,
+
+    /// <summary>The home page banner (Media Bar Card): same clip, larger and sharper.</summary>
+    Banner,
+}
+
 /// <summary>Streaming knobs the server applies to previews.</summary>
 public sealed record StreamOptions
 {

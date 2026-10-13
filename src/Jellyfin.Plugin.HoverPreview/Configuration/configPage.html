@@ -87,6 +87,13 @@
                         <div class="inputContainer">
                             <input id="TranscodeBitrateKbps" type="number" is="emby-input" min="300" max="20000" label="Transcode bitrate (kbps)" />
                         </div>
+                        <div class="inputContainer">
+                            <input id="BannerMaxWidth" type="number" is="emby-input" min="640" max="3840" step="2" label="Banner clip width (px)" />
+                            <div class="fieldDescription">Media Bar Card plays the same clips in its home banner. The banner is much bigger than a card, so its transcode is sharper.</div>
+                        </div>
+                        <div class="inputContainer">
+                            <input id="BannerBitrateKbps" type="number" is="emby-input" min="1000" max="40000" label="Banner clip bitrate (kbps)" />
+                        </div>
                     </div>
 
                     <div>
@@ -102,7 +109,7 @@
                 var pluginId = '4f7ecbe9-9f13-44e5-814d-63e5ad579f8c';
                 var page = document.querySelector('#HoverPreviewConfigPage');
                 var checkboxes = ['Enabled', 'EnableVideo', 'StartMuted', 'EnableOnHome', 'EnableOnLibraries', 'EnableOnSearch', 'EnableOnDetails', 'AllowDirectPlay'];
-                var numbers = ['HoverDelayMs', 'ClipDurationSeconds', 'MovieRangeStartPercent', 'MovieRangeEndPercent', 'EpisodeRangeStartPercent', 'EpisodeRangeEndPercent', 'MaxDirectPlayBitrateMbps', 'TranscodeMaxWidth', 'TranscodeBitrateKbps'];
+                var numbers = ['HoverDelayMs', 'ClipDurationSeconds', 'MovieRangeStartPercent', 'MovieRangeEndPercent', 'EpisodeRangeStartPercent', 'EpisodeRangeEndPercent', 'MaxDirectPlayBitrateMbps', 'TranscodeMaxWidth', 'TranscodeBitrateKbps', 'BannerMaxWidth', 'BannerBitrateKbps'];
 
                 page.addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();
