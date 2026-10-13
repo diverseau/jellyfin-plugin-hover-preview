@@ -166,6 +166,24 @@ public class InjectionTests
     }
 
     [Theory]
+    // jellyfin-web 10.11's details page template, which File Transformation's "index.html" regex also matches.
+    [InlineData("\"use strict\";(self.webpackChunk=self.webpackChunk||[]).push([[76331],{90934:function(e,t,i){i.r(t),t.default='<div id=\"itemDetailPage\"></div>'}}]);")]
+    [InlineData("<div class=\"page\"><head></head><body></body></div>")]
+    [InlineData("<!DOCTYPE html><html><head></head><p>no body end</p></html>")]
+    [InlineData("plain text")]
+    public void Non_documents_are_left_untouched(string content)
+    {
+        Assert.Equal(content, IndexHtmlInjector.Inject(content, string.Empty, "1"));
+    }
+
+    [Fact]
+    public void Leading_whitespace_and_lowercase_doctype_are_accepted()
+    {
+        var html = IndexHtmlInjector.Inject("\n  <!doctype html><html><head></head><body></body></html>", string.Empty, "1");
+        Assert.Contains(IndexHtmlInjector.Marker, html, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData(null, "")]
     [InlineData("", "")]
     [InlineData("/", "")]

@@ -27,6 +27,8 @@
     var TRANSCODE_TIMEOUT = 20000;
     var MUTE_KEY = 'hoverPreview.muted';
     var PREVIEW_VOLUME = 0.75;    // previews play a bit quieter than full volume when unmuted
+    var END_TRIM = 1.5;           // seconds cut off the end of every clip, so it never runs into the next shot
+    var FADE_OUT_MS = 1000;       // sound fades out over this while the picture fades back to the still
 
     var hoverMedia = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
 
@@ -726,6 +728,7 @@
         var url = streamUrl(path, stream.playSessionId);
 
         // A direct file has to seek to the clip; a transcode already starts there.
+        video.volume = PREVIEW_VOLUME; // the previous clip may have ended faded out
         video.src = stream.transcode ? url : url + '#t=' + stream.startSeconds.toFixed(2);
         video.load();
         var attempt = video.play();
@@ -783,7 +786,7 @@
 
     function onTimeUpdate() {
         var stream = state.stream;
-        if (stream && clipElapsed() >= stream.durationSeconds) {
+        if (stream && clipElapsed() >= stream.durationSeconds - END_TRIM) {
             endClip();
         }
     }
@@ -809,17 +812,36 @@
     /** Clip finished: fade back to the still and stay open, like Netflix. */
     function endClip() {
         var stream = state.stream;
-        if (!stream) {
+        if (!stream || stream.ending) {
             return;
         }
+        stream.ending = true;
         clearTimeout(state.stallTimer);
         ui.root.classList.remove('hp-playing');
-        // Let the video fade out before tearing it down, unless another clip has started meanwhile.
+        // Keep playing while the picture and sound fade out, then tear down, unless another clip has
+        // started meanwhile.
+        var video = ui.video;
+        var from = video.volume;
+        var started = performance.now();
+        function step(now) {
+            if (state.stream !== stream) {
+                return;
+            }
+            var t = Math.min(1, (now - started) / FADE_OUT_MS);
+            video.volume = from * (1 - t) * (1 - t); // eased, so the tail doesn't drop off suddenly
+            if (t < 1) {
+                requestAnimationFrame(step);
+            } else {
+                stopVideo();
+            }
+        }
+        requestAnimationFrame(step);
+        // Animation frames pause in background tabs; still stop on time there.
         setTimeout(function () {
             if (state.stream === stream) {
                 stopVideo();
             }
-        }, 400);
+        }, FADE_OUT_MS + 250);
     }
 
     function releaseStream() {
@@ -867,7 +889,7 @@
         e.stopPropagation();
         var video = ui.video;
         video.muted = !video.muted;
-        if (!video.muted) {
+        if (!video.muted && !(state.stream && state.stream.ending)) {
             video.volume = PREVIEW_VOLUME;
         }
         writeMuted(video.muted);

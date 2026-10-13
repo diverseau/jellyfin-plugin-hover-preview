@@ -9,14 +9,18 @@ public static class IndexHtmlInjector
     /// <summary>Marker attribute that makes injection idempotent (both injection paths may see the same page).</summary>
     public const string Marker = "data-hover-preview";
 
-    /// <summary>Returns <paramref name="html"/> with the client files linked, or unchanged if already present.</summary>
+    /// <summary>
+    /// Returns <paramref name="html"/> with the client files linked, or unchanged if already present or if it
+    /// is not an HTML document. File Transformation matches "index.html" as a regex, so this callback also
+    /// receives webpack chunks such as itemDetails-index-html.*.chunk.js; appending tags to those breaks them.
+    /// </summary>
     /// <param name="html">The original page.</param>
     /// <param name="baseUrl">Jellyfin's configured base URL ("" or "/jellyfin").</param>
     /// <param name="cacheToken">Version token appended to the URLs to bust caches on upgrade.</param>
     /// <returns>The page with tags added.</returns>
     public static string Inject(string html, string? baseUrl, string cacheToken)
     {
-        if (string.IsNullOrEmpty(html) || html.Contains(Marker, StringComparison.Ordinal))
+        if (string.IsNullOrEmpty(html) || html.Contains(Marker, StringComparison.Ordinal) || !IsHtmlDocument(html))
         {
             return html;
         }
@@ -50,9 +54,18 @@ public static class IndexHtmlInjector
         return "/" + trimmed;
     }
 
+    /// <summary>A whole page, not a script or template that merely contains HTML in a string.</summary>
+    internal static bool IsHtmlDocument(string text)
+    {
+        var start = text.AsSpan().TrimStart();
+        return (start.StartsWith("<!doctype html", StringComparison.OrdinalIgnoreCase) || start.StartsWith("<html", StringComparison.OrdinalIgnoreCase))
+            && text.Contains("</head>", StringComparison.OrdinalIgnoreCase)
+            && text.Contains("</body>", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string InsertBefore(string html, string closingTag, string content)
     {
         var index = html.LastIndexOf(closingTag, StringComparison.OrdinalIgnoreCase);
-        return index < 0 ? html + content : html.Insert(index, content);
+        return html.Insert(index, content);
     }
 }
