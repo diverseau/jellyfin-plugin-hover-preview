@@ -272,6 +272,15 @@ public class ConfigurationTests
     }
 
     [Fact]
+    public void Fingerprint_changes_when_full_movie_preview_is_toggled()
+    {
+        var clips = new PluginConfiguration { FullMoviePreview = false };
+        var fullMovie = new PluginConfiguration { FullMoviePreview = true };
+
+        Assert.NotEqual(clips.PlanFingerprint(), fullMovie.PlanFingerprint());
+    }
+
+    [Fact]
     public void Banner_size_uses_the_banner_transcode_settings()
     {
         var config = new PluginConfiguration();

@@ -22,6 +22,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets a value indicating whether clips start muted.</summary>
     public bool StartMuted { get; set; } = true;
 
+    /// <summary>Gets or sets whether movie previews play the entire movie.</summary>
+    public bool FullMoviePreview { get; set; }
+
     public bool EnableOnHome { get; set; } = true;
 
     public bool EnableOnLibraries { get; set; } = true;
@@ -82,6 +85,7 @@ public class PluginConfiguration : BasePluginConfiguration
     internal string PlanFingerprint() => string.Join(
         ':',
         ClampedClipSeconds,
+        FullMoviePreview,
         MovieRangeStartPercent,
         MovieRangeEndPercent,
         EpisodeRangeStartPercent,

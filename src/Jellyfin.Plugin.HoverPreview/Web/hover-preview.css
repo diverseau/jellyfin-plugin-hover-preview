@@ -288,3 +288,49 @@
     color: var(--dimTextColor, #777);
     font-size: 0.8em;
 }
+
+/* Full-movie hover preview seek bar */
+.hp-seek {
+    position: absolute;
+    z-index: 7;
+    left: 4.5%;
+    right: 4.5%;
+    bottom: 2%;
+    display: flex;
+    align-items: center;
+    gap: 0.65em;
+    padding: 0.25em 0.45em;
+    border-radius: 0.35em;
+    background: rgba(0, 0, 0, 0.62);
+    color: #fff;
+    cursor: default;
+}
+
+.hp-seek[hidden] {
+    display: none;
+}
+
+.hp-seek-input {
+    flex: 1;
+    min-width: 0;
+    height: 1.2em;
+    margin: 0;
+    accent-color: var(--hp-progress, #fff);
+    cursor: pointer;
+}
+
+.hp-seek-time {
+    flex: none;
+    min-width: 5.5em;
+    text-align: right;
+    color: #fff;
+    font-size: 0.75em;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+
+/* seek bar clearance */
+.hp-media:has(.hp-seek:not([hidden])) .hp-title,
+.hp-media:has(.hp-seek:not([hidden])) .hp-mute {
+    bottom: calc(2% + 2.5rem);
+}

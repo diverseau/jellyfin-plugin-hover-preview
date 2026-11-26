@@ -217,9 +217,24 @@ public sealed class ClipPlanService
             return none;
         }
 
-        var picker = new ClipPicker(config.ToClipOptions());
-        var source = await ToClipSourceAsync(item, cancellationToken).ConfigureAwait(false);
-        var window = picker.PickMovie(source);
+        ClipWindow? window;
+
+        if (config.FullMoviePreview)
+        {
+            // Full-movie mode: start at the beginning and allow playback to reach the real end.
+            var runtimeTicks = item.RunTimeTicks ?? 0;
+            window = runtimeTicks > 0
+                ? new ClipWindow(item.Id, 0, runtimeTicks, "full")
+                : null;
+        }
+        else
+        {
+            // Default mode: retain the original spoiler-safe clip selection.
+            var picker = new ClipPicker(config.ToClipOptions());
+            var source = await ToClipSourceAsync(item, cancellationToken).ConfigureAwait(false);
+            window = picker.PickMovie(source);
+        }
+
         var clip = window is null ? null : ToClip(item, window, user, streamOptions);
         return clip is null
             ? none

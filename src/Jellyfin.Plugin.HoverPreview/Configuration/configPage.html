@@ -35,6 +35,13 @@
                                 <span>Start clips muted</span>
                             </label>
                         </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="FullMoviePreview" type="checkbox" is="emby-checkbox" />
+                                <span>Full-movie previews with seek bar</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">Play movies from the beginning, allowing seeking throughout the movie. This bypasses the movie spoiler guard.</div>
+                        </div>
                         <div class="inputContainer">
                             <input id="HoverDelayMs" type="number" is="emby-input" min="100" max="3000" step="50" label="Hover delay (ms)" />
                             <div class="fieldDescription">How long the pointer rests on a card before it pops out. Netflix uses about 500.</div>
@@ -108,7 +115,7 @@
             (function () {
                 var pluginId = '4f7ecbe9-9f13-44e5-814d-63e5ad579f8c';
                 var page = document.querySelector('#HoverPreviewConfigPage');
-                var checkboxes = ['Enabled', 'EnableVideo', 'StartMuted', 'EnableOnHome', 'EnableOnLibraries', 'EnableOnSearch', 'EnableOnDetails', 'AllowDirectPlay'];
+                var checkboxes = ['Enabled', 'EnableVideo', 'StartMuted', 'FullMoviePreview', 'EnableOnHome', 'EnableOnLibraries', 'EnableOnSearch', 'EnableOnDetails', 'AllowDirectPlay'];
                 var numbers = ['HoverDelayMs', 'ClipDurationSeconds', 'MovieRangeStartPercent', 'MovieRangeEndPercent', 'EpisodeRangeStartPercent', 'EpisodeRangeEndPercent', 'MaxDirectPlayBitrateMbps', 'TranscodeMaxWidth', 'TranscodeBitrateKbps', 'BannerMaxWidth', 'BannerBitrateKbps'];
 
                 page.addEventListener('pageshow', function () {
