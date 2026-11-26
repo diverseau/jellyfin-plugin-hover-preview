@@ -323,7 +323,15 @@
         var logo = el('img', 'hp-logo', { alt: '' });
         var title = el('div', 'hp-title');
         var mute = el('button', 'hp-btn hp-mute', { type: 'button' });
-        media.append(still, video, shade, logo, title, mute);
+        var seek = el('div', 'hp-seek');
+        var seekInput = el('input', 'hp-seek-input', {
+            type: 'range', min: '0', max: '1000', step: '1',
+            'aria-label': 'Seek preview'
+        });
+        var seekTime = el('span', 'hp-seek-time');
+        seek.append(seekInput, seekTime);
+        seek.hidden = true;
+        media.append(still, video, shade, logo, title, mute, seek);
 
         var panel = el('div', 'hp-panel');
         var buttons = el('div', 'hp-buttons');
@@ -341,7 +349,7 @@
         root.append(media, panel);
         document.body.appendChild(root);
 
-        ui = { root: root, media: media, still: still, video: video, logo: logo, title: title, mute: mute, play: play, fav: fav, like: like, more: more, meta: meta, tags: tags };
+        ui = { root: root, media: media, still: still, video: video, logo: logo, title: title, mute: mute, seek: seek, seekInput: seekInput, seekTime: seekTime, play: play, fav: fav, like: like, more: more, meta: meta, tags: tags };
 
         root.addEventListener('pointerenter', cancelClose);
         root.addEventListener('pointerleave', function (e) {
@@ -351,7 +359,7 @@
         });
         // Picture: play (like Netflix). Rest of the card: details. Buttons handle themselves.
         media.addEventListener('click', function (e) {
-            if (!e.target.closest('.hp-btn')) {
+            if (!e.target.closest('.hp-btn, .hp-seek')) {
                 playItem();
             }
         });
@@ -361,6 +369,30 @@
             }
         });
         mute.addEventListener('click', toggleMute);
+        seek.addEventListener('pointerdown', function (e) {
+            e.stopPropagation();
+            cancelClose();
+        });
+        seek.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+        ['change', 'pointerup', 'pointercancel', 'blur'].forEach(function (type) {
+            seekInput.addEventListener(type, function () {
+                delete seekInput.dataset.dragging;
+            });
+        });
+        seekInput.addEventListener('input', function () {
+            seekInput.dataset.dragging = '1';
+            var stream = state.stream;
+            if (stream && stream.clip.strategy === 'full') {
+                ui.seekTime.textContent = formatSeekTime(
+                    Number(seekInput.value) / 1000 * stream.durationSeconds
+                ) + ' / ' + formatSeekTime(stream.durationSeconds);
+            }
+        });
+        seekInput.addEventListener('change', function () {
+            seekTo(Number(seekInput.value) / 1000);
+        });
         play.addEventListener('click', playItem);
         more.addEventListener('click', openDetails);
         fav.addEventListener('click', toggleFavorite);
@@ -708,6 +740,71 @@
             + '&playSessionId=' + encodeURIComponent(playSessionId);
     }
 
+    function formatSeekTime(seconds) {
+        seconds = Math.max(0, Math.floor(Number(seconds) || 0));
+        var hours = Math.floor(seconds / 3600);
+        var minutes = Math.floor((seconds % 3600) / 60);
+        var secs = seconds % 60;
+        return hours
+            ? hours + ':' + String(minutes).padStart(2, '0') + ':' + String(secs).padStart(2, '0')
+            : minutes + ':' + String(secs).padStart(2, '0');
+    }
+
+    function updateSeekUi() {
+        var stream = state.stream;
+        if (!stream || !ui || ui.seekInput.dataset.dragging || stream.clip.strategy !== 'full') {
+            return;
+        }
+        // Don't move the thumb underneath the user's finger while scrubbing.
+        if (ui.seekInput.matches(':active')) {
+            return;
+        }
+        var position = stream.transcode
+            ? stream.startSeconds + ui.video.currentTime
+            : ui.video.currentTime;
+        position = Math.max(0, Math.min(stream.durationSeconds, position));
+        ui.seekInput.value = String(Math.round(position / stream.durationSeconds * 1000));
+        ui.seekTime.textContent = formatSeekTime(position)
+            + ' / ' + formatSeekTime(stream.durationSeconds);
+    }
+
+    function seekTo(fraction) {
+        var stream = state.stream;
+        if (!stream || stream.clip.strategy !== 'full' || stream.ending) {
+            return;
+        }
+        // Avoid requesting a new transcode exactly at end-of-file.
+        var target = Math.max(0, Math.min(
+            Math.max(0, stream.durationSeconds - 2),
+            fraction * stream.durationSeconds
+        ));
+
+        if (!stream.transcode) {
+            ui.video.currentTime = target;
+            updateSeekUi();
+            return;
+        }
+
+        // A transcoded stream only exposes its currently generated segment.
+        // Restart Jellyfin's transcode at the requested movie timestamp.
+        var next = Object.assign({}, stream, {
+            startSeconds: target,
+            playSessionId: randomHex(16),
+            transcodeUrl: stream.clip.transcodeUrl.replace(
+                /([?&]startTimeTicks=)\d+/,
+                '$1' + Math.round(target * TICKS_PER_SECOND)
+            )
+        });
+
+        stopEncoding(stream, false);
+        releaseStream();
+        state.stream = next;
+        ui.seekInput.value = String(Math.round(target / next.durationSeconds * 1000));
+        ui.seekTime.textContent = formatSeekTime(target)
+            + ' / ' + formatSeekTime(next.durationSeconds);
+        loadStream();
+    }
+
     function startClip(clip, token) {
         var video = ui.video;
         var canDirect = !!clip.directUrl && !!clip.directMimeType && video.canPlayType(clip.directMimeType) !== '';
@@ -724,13 +821,17 @@
             durationSeconds: clip.durationTicks / TICKS_PER_SECOND,
             seeked: false
         };
+        ui.seek.hidden = clip.strategy !== 'full' || !(clip.durationTicks > 0);
+        updateSeekUi();
         loadStream();
     }
 
     function loadStream() {
         var stream = state.stream;
         var video = ui.video;
-        var path = stream.transcode ? stream.clip.transcodeUrl : stream.clip.directUrl;
+        var path = stream.transcode
+            ? (stream.transcodeUrl || stream.clip.transcodeUrl)
+            : stream.clip.directUrl;
         var url = streamUrl(path, stream.playSessionId);
 
         // A direct file has to seek to the clip; a transcode already starts there.
@@ -793,7 +894,10 @@
 
     function onTimeUpdate() {
         var stream = state.stream;
-        if (stream && clipElapsed() >= stream.durationSeconds - END_TRIM) {
+        updateSeekUi();
+        // Full-movie streams end naturally; short previews retain their configured cutoff.
+        if (stream && stream.clip.strategy !== 'full'
+                && clipElapsed() >= stream.durationSeconds - END_TRIM) {
             endClip();
         }
     }
