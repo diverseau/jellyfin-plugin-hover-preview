@@ -209,23 +209,36 @@ public sealed class ClipPlanService
         && video.VideoType == VideoType.VideoFile
         && (video.RunTimeTicks ?? 0) > 0;
 
-    private Task<ClipPlanDto> BuildMoviePlanAsync(BaseItem item, User? user, PluginConfiguration config, StreamOptions streamOptions, CancellationToken cancellationToken)
+    private async Task<ClipPlanDto> BuildMoviePlanAsync(BaseItem item, User? user, PluginConfiguration config, StreamOptions streamOptions, CancellationToken cancellationToken)
     {
         var none = new ClipPlanDto { PoolId = item.Id, Kind = "none", HeuristicVersion = ClipPicker.HeuristicVersion };
         if (item is BoxSet || !IsPreviewable(item))
         {
-            return Task.FromResult(none);
+            return none;
         }
 
-        // Full-movie preview: start at the beginning and let playback run to the real end.
-        var runtimeTicks = item.RunTimeTicks ?? 0;
-        var window = runtimeTicks > 0
-            ? new ClipWindow(item.Id, 0, runtimeTicks, "full")
-            : null;
+        ClipWindow? window;
+
+        if (config.FullMoviePreview)
+        {
+            // Full-movie mode: start at the beginning and allow playback to reach the real end.
+            var runtimeTicks = item.RunTimeTicks ?? 0;
+            window = runtimeTicks > 0
+                ? new ClipWindow(item.Id, 0, runtimeTicks, "full")
+                : null;
+        }
+        else
+        {
+            // Default mode: retain the original spoiler-safe clip selection.
+            var picker = new ClipPicker(config.ToClipOptions());
+            var source = await ToClipSourceAsync(item, cancellationToken).ConfigureAwait(false);
+            window = picker.PickMovie(source);
+        }
+
         var clip = window is null ? null : ToClip(item, window, user, streamOptions);
-        return Task.FromResult(clip is null
+        return clip is null
             ? none
-            : new ClipPlanDto { PoolId = item.Id, Kind = "movie", HeuristicVersion = ClipPicker.HeuristicVersion, Clips = new[] { clip } });
+            : new ClipPlanDto { PoolId = item.Id, Kind = "movie", HeuristicVersion = ClipPicker.HeuristicVersion, Clips = new[] { clip } };
     }
 
     private async Task<ClipPlanDto> BuildSeriesPlanAsync(Series series, User? user, PluginConfiguration config, StreamOptions streamOptions, CancellationToken cancellationToken)
